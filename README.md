@@ -338,6 +338,17 @@ services:
   ...
 ```
 
+You can give the user specified at `MONGODB_USERNAME` access to additional databases through setting the variable `MONGODB_EXTRA_DATABASES`. `MONGODB_EXTRA_DATABASES` should contain a comma-separated list of database names. The following example gives `my_user` access to `my_database`, `my_second_database` and `my_third_database`.
+
+```console
+$ docker run --name mongodb \
+  -e MONGODB_USERNAME=my_user \
+  -e MONGODB_PASSWORD=password123 \
+  -e MONGODB_DATABASE=my_database \
+  -e MONGODB_EXTRA_DATABASES=my_second_database,my_third_database \
+  bitnami/mongodb:latest
+```
+
 **Note!**
 Creation of a user enables authentication on the MongoDB&reg; server and as a result unauthenticated access by *any* user is not permitted.
 

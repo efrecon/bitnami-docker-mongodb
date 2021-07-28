@@ -492,6 +492,7 @@ mongodb_set_replicasetmode_conf() {
 #########################
 mongodb_create_users() {
     local result
+    local db
 
     info "Creating users..."
     if [[ -n "$MONGODB_ROOT_PASSWORD" ]] && ! [[ "$MONGODB_REPLICA_SET_MODE" =~ ^(secondary|arbiter|hidden) ]]; then
@@ -511,6 +512,17 @@ EOF
 db.getSiblingDB('$MONGODB_DATABASE').createUser({ user: '$MONGODB_USERNAME', pwd: '$MONGODB_PASSWORD', roles: [{role: 'readWrite', db: '$MONGODB_DATABASE'}] })
 EOF
         )
+    fi
+    if [[ -n "$MONGODB_USERNAME" ]] && [[ -n "$MONGODB_PASSWORD" ]] && [[ -n "$MONGODB_EXTRA_DATABASES" ]]; then
+        for db in $(printf %s\\n "$MONGODB_EXTRA_DATABASES" | tr ',' ' '); do
+            info "Giving user '$MONGODB_USERNAME' access to '$db'..."
+
+            result=$(
+                mongodb_execute 'root' "$MONGODB_ROOT_PASSWORD" "" "127.0.0.1" <<EOF
+db.getSiblingDB('$db').createUser({ user: '$MONGODB_USERNAME', pwd: '$MONGODB_PASSWORD', roles: [{role: 'readWrite', db: '$db'}] })
+EOF
+            )
+        done
     fi
     info "Users created"
 }
