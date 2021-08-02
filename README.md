@@ -175,7 +175,7 @@ $ docker-compose up -d
 
 ## Initializing a new instance
 
-When the container is executed for the first time, it will execute the files with extensions `.sh`, and `.js` located at `/docker-entrypoint-initdb.d`.
+When the container is executed for the first time, it will execute the files with extensions `.sh`, `.js` and `.js.gz` located at `/docker-entrypoint-initdb.d`. Files with extension `.sh` and that are executable will be executed, otherwise they will be sourced. When authentication is turned on (see [below](#setting-the-root-password-on-first-run)) files with extension `.js` will be run authorized as the root user, if present, alternatively the first user of the `MONGODB_USERNAMES` list. File with extension `.js.gz` will be decompressed before run as files with extension `.js`. All relevant files at `/docker-entrypoint-initdb.d` are treated in alphabetical order.
 
 In order to have your custom files inside the docker image you can mount them as a volume.
 
@@ -187,7 +187,7 @@ Passing extra command-line flags to the mongod service command is possible throu
 - `MONGODB_CLIENT_EXTRA_FLAGS`: Flags to be appended to the `mongo` command which is used to connect to the (local or remote) `mongod` daemon. No defaults
 
 ```console
-$ docker run --name mongodb -e ALLOW_EMPTY_PASSWORD=yes -e MONGODB_EXTRA_FLAGS='--wiredTigerCacheSizeGB=2' bitnami/mongodb:latest
+$ docker run --name mongodb -e ALLOW_EMPTY_PASSWORDS=yes -e MONGODB_EXTRA_FLAGS='--wiredTigerCacheSizeGB=2' bitnami/mongodb:latest
 ```
 
 or by modifying the [`docker-compose.yml`](https://github.com/bitnami/bitnami-docker-mongodb/blob/master/docker-compose.yml) file present in this repository:
@@ -197,7 +197,7 @@ services:
   mongodb:
   ...
     environment:
-      - ALLOW_EMPTY_PASSWORD=yes
+      - ALLOW_EMPTY_PASSWORDS=yes
       - MONGODB_EXTRA_FLAGS=--wiredTigerCacheSizeGB=2
   ...
 ```
@@ -210,7 +210,7 @@ Configuring the system log verbosity level is possible through the following env
 - `MONGODB_SYSTEM_LOG_VERBOSITY`: MongoDB&reg; system log verbosity level. Default: `0`. Possible values: `[0, 1, 2, 3, 4, 5]`. For more information about the verbosity levels please refer to the [MongoDB&reg; documentation](https://docs.mongodb.com/manual/reference/configuration-options/#systemLog.verbosity)
 
 ```console
-$ docker run --name mongodb -e ALLOW_EMPTY_PASSWORD=yes -e MONGODB_SYSTEM_LOG_VERBOSITY='3' bitnami/mongodb:latest
+$ docker run --name mongodb -e ALLOW_EMPTY_PASSWORDS=yes -e MONGODB_SYSTEM_LOG_VERBOSITY='3' bitnami/mongodb:latest
 ```
 
 or by modifying the [`docker-compose.yml`](https://github.com/bitnami/bitnami-docker-mongodb/blob/master/docker-compose.yml) file present in this repository:
@@ -220,7 +220,7 @@ services:
   mongodb:
   ...
     environment:
-      - ALLOW_EMPTY_PASSWORD=yes
+      - ALLOW_EMPTY_PASSWORDS=yes
       - MONGODB_SYSTEM_LOG_VERBOSITY=3
   ...
 ```
@@ -234,7 +234,7 @@ Enabling/disabling IPv6 is possible through the following env var:
 To enable IPv6 support, you can execute:
 
 ```console
-$ docker run --name mongodb -e ALLOW_EMPTY_PASSWORD=yes -e MONGODB_ENABLE_IPV6=yes bitnami/mongodb:latest
+$ docker run --name mongodb -e ALLOW_EMPTY_PASSWORDS=yes -e MONGODB_ENABLE_IPV6=yes bitnami/mongodb:latest
 ```
 
 or by modifying the [`docker-compose.yml`](https://github.com/bitnami/bitnami-docker-mongodb/blob/master/docker-compose.yml) file present in this repository:
@@ -244,7 +244,7 @@ services:
   mongodb:
   ...
     environment:
-      - ALLOW_EMPTY_PASSWORD=yes
+      - ALLOW_EMPTY_PASSWORDS=yes
       - MONGODB_ENABLE_IPV6=yes
   ...
 ```
@@ -256,7 +256,7 @@ Enabling/disabling [directoryPerDB](https://docs.mongodb.com/manual/reference/co
 - `MONGODB_ENABLE_DIRECTORY_PER_DB`: Whether to enable/disable directoryPerDB on MongoDB&reg;. Default: `true`. Possible values: `[true, false]`
 
 ```console
-$ docker run --name mongodb -e ALLOW_EMPTY_PASSWORD=yes -e MONGODB_ENABLE_DIRECTORY_PER_DB=yes bitnami/mongodb:latest
+$ docker run --name mongodb -e ALLOW_EMPTY_PASSWORDS=yes -e MONGODB_ENABLE_DIRECTORY_PER_DB=yes bitnami/mongodb:latest
 ```
 
 or by modifying the [`docker-compose.yml`](https://github.com/bitnami/bitnami-docker-mongodb/blob/master/docker-compose.yml) file present in this repository:
@@ -266,7 +266,7 @@ services:
   mongodb:
   ...
     environment:
-      - ALLOW_EMPTY_PASSWORD=yes
+      - ALLOW_EMPTY_PASSWORDS=yes
       - MONGODB_ENABLE_DIRECTORY_PER_DB=yes
   ...
 ```
@@ -278,7 +278,7 @@ Enabling/disabling [journal](https://docs.mongodb.com/manual/reference/configura
 - `MONGODB_ENABLE_JOURNAL`: Whether to enable/disable journaling on MongoDB&reg;. Default: `true`. Possible values: `[true, false]`
 
 ```console
-$ docker run --name mongodb -e ALLOW_EMPTY_PASSWORD=yes -e MONGODB_ENABLE_JOURNAL=true bitnami/mongodb:latest
+$ docker run --name mongodb -e ALLOW_EMPTY_PASSWORDS=yes -e MONGODB_ENABLE_JOURNAL=true bitnami/mongodb:latest
 ```
 
 or by modifying the [`docker-compose.yml`](https://github.com/bitnami/bitnami-docker-mongodb/blob/master/docker-compose.yml) file present in this repository:
@@ -288,7 +288,7 @@ services:
   mongodb:
   ...
     environment:
-      - ALLOW_EMPTY_PASSWORD=yes
+      - ALLOW_EMPTY_PASSWORDS=yes
       - MONGODB_ENABLE_JOURNAL=true
   ...
 ```
@@ -315,38 +315,27 @@ services:
 
 The `root` user is configured to have full administrative access to the MongoDB&reg; server. When `MONGODB_ROOT_PASSWORD` is not specified the server allows unauthenticated and unrestricted access.
 
-## Creating a user and database on first run
+## Creating users and databases on first run
 
-You can create a user with restricted access to a database while starting the container for the first time. To do this, provide the `MONGODB_USERNAME`, `MONGODB_PASSWORD` and `MONGODB_DATABASE` environment variables.
+You can create users with restricted access to databases while starting the container for the first time. To do this, provide the `MONGODB_USERNAMES`, `MONGODB_PASSWORDS` and `MONGODB_DATABASES` environment variables. In these variables, the characters `,` and `;` are used as field separators. You *must* provide as many usernames, as passwords and databases through these variables.
 
 ```console
 $ docker run --name mongodb \
-  -e MONGODB_USERNAME=my_user -e MONGODB_PASSWORD=password123 \
-  -e MONGODB_DATABASE=my_database bitnami/mongodb:latest
+  -e MONGODB_USERNAMES=my_user -e MONGODB_PASSWORDS=password123 \
+  -e MONGODB_DATABASES=my_database bitnami/mongodb:latest
 ```
 
-or by modifying the [`docker-compose.yml`](https://github.com/bitnami/bitnami-docker-mongodb/blob/master/docker-compose.yml) file present in this repository:
+You can also modify the [`docker-compose.yml`](https://github.com/bitnami/bitnami-docker-mongodb/blob/master/docker-compose.yml) file present in this repository as in the example below. This would create a user `my_user1` with access to the database `my_database1` and a user `my_user2` with access to the database `my_database2`. Note the use of two different field delimiters.
 
 ```yaml
 services:
   mongodb:
   ...
     environment:
-      - MONGODB_USERNAME=my_user
-      - MONGODB_PASSWORD=password123
-      - MONGODB_DATABASE=my_database
+      - MONGODB_USERNAMES=my_user1,my_user2
+      - MONGODB_PASSWORDS=password123,password321
+      - MONGODB_DATABASES=my_database1;my_database2
   ...
-```
-
-You can give the user specified at `MONGODB_USERNAME` access to additional databases through setting the variable `MONGODB_EXTRA_DATABASES`. `MONGODB_EXTRA_DATABASES` should contain a comma-separated list of database names. The following example gives `my_user` access to `my_database`, `my_second_database` and `my_third_database`.
-
-```console
-$ docker run --name mongodb \
-  -e MONGODB_USERNAME=my_user \
-  -e MONGODB_PASSWORD=password123 \
-  -e MONGODB_DATABASE=my_database \
-  -e MONGODB_EXTRA_DATABASES=my_second_database,my_third_database \
-  bitnami/mongodb:latest
 ```
 
 **Note!**
@@ -784,6 +773,13 @@ $ docker-compose up mongodb
 
 # Notable Changes
 
+## 3.6.23-r121, 4.0.26-r10, 4.2.15-r25, 4.4.8-r1
+
+- The variables `MONGODB_USERNAME`, `MONGODB_PASSWORD`, `MONGODB_DATABASE` and `ALLOW_EMPTY_PASSWORD` were renamed to `MONGODB_USERNAMES`, `MONGODB_PASSWORDS`, `MONGODB_DATABASES` and `ALLOW_EMPTY_PASSWORDS` (note the trailing `S`) to permit initialization of more than one database the first time that a container is run. The old variables are still recognised, but deprecation warnings are printed out. `MONGODB_USERNAMES`, `MONGODB_PASSWORDS`, `MONGODB_DATABASES` use the characters `,` and/or `;` as field delimiters for consistency with other Bitnami's images such as [OpenLDAP] or [Kafka]. This is a slightly breaking change, but it should only impact first time creation when still using the old variables.
+
+  [OpenLDAP]:https://github.com/bitnami/bitnami-docker-openldap
+  [Kafka]: https://github.com/bitnami/bitnami-docker-kafka
+
 ## 3.6.14-r69, 4.0.13-r11, and 4.2.1-r12
 
 - The configuration files mount point changed from `/opt/bitnami/mongodb/conf` to `/bitnami/mongodb/conf`.
@@ -842,3 +838,4 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+,
