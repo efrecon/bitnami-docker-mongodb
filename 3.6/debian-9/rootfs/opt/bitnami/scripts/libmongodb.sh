@@ -13,41 +13,6 @@
 . /opt/bitnami/scripts/libfs.sh
 . /opt/bitnami/scripts/libnet.sh
 
-########################
-# Create alias for environment variable, so both can be used
-# Globals:
-#   None
-# Arguments:
-#   $1 - Alias environment variable name
-#   $2 - Original environment variable name
-# Returns:
-#   None
-#########################
-mongodb_declare_alias_env() {
-    local -r alias="${1:?missing environment variable alias}"
-    local -r original="${2:?missing original environment variable}"
-    if printenv "${original}" > /dev/null; then
-        export "$alias"="${!original:-}"
-    fi
-}
-
-
-########################
-# Map MongoDB legacy environment variables to the new names
-# Globals:
-#   MONGODB_*
-# Arguments:
-#   None
-# Returns:
-#   None
-#########################
-mongodb_create_alias_environment_variables() {
-    mongodb_declare_alias_env "MONGODB_USERNAMES" "MONGODB_USERNAME"
-    mongodb_declare_alias_env "MONGODB_PASSWORDS" "MONGODB_PASSWORD"
-    mongodb_declare_alias_env "MONGODB_DATABASES" "MONGODB_DATABASE"
-    mongodb_declare_alias_env "ALLOW_EMPTY_PASSWORDS" "ALLOW_EMPTY_PASSWORD"
-}
-
 
 ########################
 # Return field separator to use in lists. One of comma or semi-colon, comma
@@ -80,8 +45,8 @@ mongodb_field_separator() {
 #########################
 mongodb_auth() {
     IFS="$(mongodb_field_separator "${MONGODB_DATABASES}")" read -r -a databases <<< "${MONGODB_DATABASES}"
-    IFS="$(mongodb_field_separator "${MONGODB_USERNAMES:-}")" read -r -a usernames <<< "${MONGODB_USERNAMES:-}"
-    IFS="$(mongodb_field_separator "${MONGODB_PASSWORDS:-}")" read -r -a passwords <<< "${MONGODB_PASSWORDS:-}"
+    IFS="$(mongodb_field_separator "${MONGODB_USERNAMES}")" read -r -a usernames <<< "${MONGODB_USERNAMES}"
+    IFS="$(mongodb_field_separator "${MONGODB_PASSWORDS}")" read -r -a passwords <<< "${MONGODB_PASSWORDS}"
     # Force missing empty passwords (occurs when MONGODB_PASSWORDS ends with a
     # separator, e.g. a coma or semi-colon)
     for (( i=0; i<${#usernames[@]}; i++ )); do
@@ -144,9 +109,9 @@ you need to provide the MONGODB_INITIAL_PRIMARY_HOST env var"
                 error_message="MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD shouldn't be set on a 'primary' node"
                 print_validation_error "$error_message"
             fi
-            if [[ -z "$MONGODB_ROOT_PASSWORD" ]] && ! is_boolean_yes "$ALLOW_EMPTY_PASSWORDS"; then
+            if [[ -z "$MONGODB_ROOT_PASSWORD" ]] && ! is_boolean_yes "$ALLOW_EMPTY_PASSWORD"; then
                 error_message="The MONGODB_ROOT_PASSWORD environment variable is empty or not set. \
-Set the environment variable ALLOW_EMPTY_PASSWORDS=yes to allow the container to be started with blank passwords. \
+Set the environment variable ALLOW_EMPTY_PASSWORD=yes to allow the container to be started with blank passwords. \
 This is only recommended for development."
                 print_validation_error "$error_message"
             fi
@@ -163,34 +128,43 @@ Available options are 'primary/secondary/arbiter/hidden'"
     fi
 
     # Deprecation warnings
-    if [ -n "${MONGODB_USERNAME-}" ]; then
-        warn "The use of MONGODB_USERNAME is deprecated, use MONGODB_USERNAMES instead. ',' and ';' characters are now reserved for separating fields, fields cannot use any default shell delimiters."
+    if [[ -n "${MONGODB_USERNAME}" ]]; then
+        warn "The use of MONGODB_USERNAME is deprecated, use MONGODB_USERNAMES instead. Also, note that ',' and ';' characters are now reserved for separating fields."
     fi
-    if [ -n "${MONGODB_PASSWORD-}" ]; then
-        warn "The use of MONGODB_PASSWORD is deprecated, use MONGODB_PASSWORDS instead. ',' and ';' characters are now reserved for separating fields, fields cannot use any default shell delimiters."
+    if [[ -n "${MONGODB_PASSWORD}" ]]; then
+        warn "The use of MONGODB_PASSWORD is deprecated, use MONGODB_PASSWORDS instead. Also, note that ',' and ';' characters are now reserved for separating fields."
     fi
-    if [ -n "${MONGODB_DATABASE-}" ]; then
-        warn "The use of MONGODB_DATABASE is deprecated, use MONGODB_DATABASES instead. ',' and ';' characters are now reserved for separating fields, fields cannot use any default shell delimiters."
+    if [[ -n "${MONGODB_DATABASE}" ]]; then
+        warn "The use of MONGODB_DATABASE is deprecated, use MONGODB_DATABASES instead. Also, note that ',' and ';' characters are now reserved for separating fields."
     fi
 
-    if [[ -n "$MONGODB_DATABASES" ]]; then
+    if [[ -n "$MONGODB_USERNAMES" ]]; then
+        # Capture list of users, passwords and databases in the usernames,
+        # passwords and databases arrays.
         mongodb_auth
-        # Verify there as many usernames as passwords as databases
-        if [[ "${#usernames[@]}" -ne "${#databases[@]}" ]]; then
-            print_validation_error "Specify the same number of users on MONGODB_USERNAMES as the number of databases on MONGODB_DATABASES!"
-        fi
+        # Verify there as many usernames as passwords
         if [[ "${#usernames[@]}" -ne "${#passwords[@]}" ]]; then
             print_validation_error "Specify the same number of passwords on MONGODB_PASSWORDS as the number of users on MONGODB_USERNAMES!"
+        fi
+        # When we have a list of databases, there should be as many databases as
+        # users (thus as passwords).
+        if [[ -n "$MONGODB_DATABASES" ]] && [[ "${#usernames[@]}" -ne "${#databases[@]}" ]]; then
+            print_validation_error "Specify the same number of users on MONGODB_USERNAMES as the number of databases on MONGODB_DATABASES!"
+        fi
+        # When the list of database is empty, then all users will be added to
+        # default database.
+        if [[ -z "$MONGODB_DATABASES" ]]; then
+            info "All users specified in MONGODB_USERNAMES will be added to the default database"
         fi
     fi
 
     # Verify empty passwords
-    if is_boolean_yes "$ALLOW_EMPTY_PASSWORDS"; then
-        warn "You set the environment variable ALLOW_EMPTY_PASSWORDS=${ALLOW_EMPTY_PASSWORDS}. For safety reasons, do not use this flag in a production environment."
-    elif [[ -n "$MONGODB_DATABASES" ]]; then
+    if is_boolean_yes "$ALLOW_EMPTY_PASSWORD"; then
+        warn "You set the environment variable ALLOW_EMPTY_PASSWORD=${ALLOW_EMPTY_PASSWORD}. For safety reasons, do not use this flag in a production environment."
+    elif [[ -n "$MONGODB_USERNAMES" ]]; then
         for (( i=0; i<${#passwords[@]}; i++ )); do
             if [[ -z "${passwords[i]}" ]]; then
-                error_message="The password for user ${usernames[i]} is empty or not set. Set the environment variable ALLOW_EMPTY_PASSWORDS=yes to allow the container to be started with blank passwords. This is only recommended for development."
+                error_message="The password for user ${usernames[i]} is empty or not set. Set the environment variable ALLOW_EMPTY_PASSWORD=yes to allow the container to be started with blank passwords. This is only recommended for development."
                 print_validation_error "$error_message"
             fi
         done            
@@ -614,17 +588,45 @@ EOF
         )
     fi
 
-    if [[ -n "$MONGODB_USERNAMES" ]] && [[ -n "$MONGODB_DATABASES" ]]; then
+    if [[ -n "$MONGODB_USERNAMES" ]]; then
+        # Fill in arrays called databases, usernames and passwords with
+        # information from matching environment variables.
         mongodb_auth
-        for (( i=0; i<${#databases[@]}; i++ )); do
-            info "Creating user '${usernames[i]}' in database '${databases[i]}'..."
 
-            result=$(
-                mongodb_execute 'root' "$MONGODB_ROOT_PASSWORD" "" "127.0.0.1" <<EOF
+        if [[ -n "$MONGODB_DATABASES" ]]; then
+            # Loop over the databases, usernames and passwords arrays, creating
+            # each user in the database at the same index.
+            for (( i=0; i<${#databases[@]}; i++ )); do
+                # MongoDB refuses to create users without passwords. It would
+                # return the following otherwise:
+                # Error: couldn't add user: User passwords must not be empty
+                if [[ -n "${passwords[i]}" ]]; then
+                    info "Creating user '${usernames[i]}' in database '${databases[i]}'..."
+
+                    result=$(
+                        mongodb_execute 'root' "$MONGODB_ROOT_PASSWORD" "" "127.0.0.1" <<EOF
 db.getSiblingDB('${databases[i]}').createUser({ user: '${usernames[i]}', pwd: '${passwords[i]}', roles: [{role: 'readWrite', db: '${databases[i]}'}] })
 EOF
-            )
-        done
+                    )
+                fi
+            done
+        else
+            # Loop over all users and create them within the default database.
+            for (( i=0; i<${#usernames[@]}; i++ )); do
+                # MongoDB refuses to create users without passwords. It would
+                # return the following otherwise:
+                # Error: couldn't add user: User passwords must not be empty
+                if [[ -n "${passwords[i]}" ]]; then
+                    info "Creating user '${usernames[i]}' in default database..."
+
+                    result=$(
+                        mongodb_execute 'root' "$MONGODB_ROOT_PASSWORD" "" "127.0.0.1" <<EOF
+db.getSiblingDB(db.stats().db).createUser({ user: '${usernames[i]}', pwd: '${passwords[i]}', roles: [{role: 'readWrite', db: db.getSiblingDB(db.stats().db).stats().db }] })
+EOF
+                    )
+                fi
+            done
+        fi
     fi
     info "Users created"
 }

@@ -187,7 +187,7 @@ Passing extra command-line flags to the mongod service command is possible throu
 - `MONGODB_CLIENT_EXTRA_FLAGS`: Flags to be appended to the `mongo` command which is used to connect to the (local or remote) `mongod` daemon. No defaults
 
 ```console
-$ docker run --name mongodb -e ALLOW_EMPTY_PASSWORDS=yes -e MONGODB_EXTRA_FLAGS='--wiredTigerCacheSizeGB=2' bitnami/mongodb:latest
+$ docker run --name mongodb -e ALLOW_EMPTY_PASSWORD=yes -e MONGODB_EXTRA_FLAGS='--wiredTigerCacheSizeGB=2' bitnami/mongodb:latest
 ```
 
 or by modifying the [`docker-compose.yml`](https://github.com/bitnami/bitnami-docker-mongodb/blob/master/docker-compose.yml) file present in this repository:
@@ -197,7 +197,7 @@ services:
   mongodb:
   ...
     environment:
-      - ALLOW_EMPTY_PASSWORDS=yes
+      - ALLOW_EMPTY_PASSWORD=yes
       - MONGODB_EXTRA_FLAGS=--wiredTigerCacheSizeGB=2
   ...
 ```
@@ -210,7 +210,7 @@ Configuring the system log verbosity level is possible through the following env
 - `MONGODB_SYSTEM_LOG_VERBOSITY`: MongoDB&reg; system log verbosity level. Default: `0`. Possible values: `[0, 1, 2, 3, 4, 5]`. For more information about the verbosity levels please refer to the [MongoDB&reg; documentation](https://docs.mongodb.com/manual/reference/configuration-options/#systemLog.verbosity)
 
 ```console
-$ docker run --name mongodb -e ALLOW_EMPTY_PASSWORDS=yes -e MONGODB_SYSTEM_LOG_VERBOSITY='3' bitnami/mongodb:latest
+$ docker run --name mongodb -e ALLOW_EMPTY_PASSWORD=yes -e MONGODB_SYSTEM_LOG_VERBOSITY='3' bitnami/mongodb:latest
 ```
 
 or by modifying the [`docker-compose.yml`](https://github.com/bitnami/bitnami-docker-mongodb/blob/master/docker-compose.yml) file present in this repository:
@@ -220,7 +220,7 @@ services:
   mongodb:
   ...
     environment:
-      - ALLOW_EMPTY_PASSWORDS=yes
+      - ALLOW_EMPTY_PASSWORD=yes
       - MONGODB_SYSTEM_LOG_VERBOSITY=3
   ...
 ```
@@ -234,7 +234,7 @@ Enabling/disabling IPv6 is possible through the following env var:
 To enable IPv6 support, you can execute:
 
 ```console
-$ docker run --name mongodb -e ALLOW_EMPTY_PASSWORDS=yes -e MONGODB_ENABLE_IPV6=yes bitnami/mongodb:latest
+$ docker run --name mongodb -e ALLOW_EMPTY_PASSWORD=yes -e MONGODB_ENABLE_IPV6=yes bitnami/mongodb:latest
 ```
 
 or by modifying the [`docker-compose.yml`](https://github.com/bitnami/bitnami-docker-mongodb/blob/master/docker-compose.yml) file present in this repository:
@@ -244,7 +244,7 @@ services:
   mongodb:
   ...
     environment:
-      - ALLOW_EMPTY_PASSWORDS=yes
+      - ALLOW_EMPTY_PASSWORD=yes
       - MONGODB_ENABLE_IPV6=yes
   ...
 ```
@@ -256,7 +256,7 @@ Enabling/disabling [directoryPerDB](https://docs.mongodb.com/manual/reference/co
 - `MONGODB_ENABLE_DIRECTORY_PER_DB`: Whether to enable/disable directoryPerDB on MongoDB&reg;. Default: `true`. Possible values: `[true, false]`
 
 ```console
-$ docker run --name mongodb -e ALLOW_EMPTY_PASSWORDS=yes -e MONGODB_ENABLE_DIRECTORY_PER_DB=yes bitnami/mongodb:latest
+$ docker run --name mongodb -e ALLOW_EMPTY_PASSWORD=yes -e MONGODB_ENABLE_DIRECTORY_PER_DB=yes bitnami/mongodb:latest
 ```
 
 or by modifying the [`docker-compose.yml`](https://github.com/bitnami/bitnami-docker-mongodb/blob/master/docker-compose.yml) file present in this repository:
@@ -266,7 +266,7 @@ services:
   mongodb:
   ...
     environment:
-      - ALLOW_EMPTY_PASSWORDS=yes
+      - ALLOW_EMPTY_PASSWORD=yes
       - MONGODB_ENABLE_DIRECTORY_PER_DB=yes
   ...
 ```
@@ -278,7 +278,7 @@ Enabling/disabling [journal](https://docs.mongodb.com/manual/reference/configura
 - `MONGODB_ENABLE_JOURNAL`: Whether to enable/disable journaling on MongoDB&reg;. Default: `true`. Possible values: `[true, false]`
 
 ```console
-$ docker run --name mongodb -e ALLOW_EMPTY_PASSWORDS=yes -e MONGODB_ENABLE_JOURNAL=true bitnami/mongodb:latest
+$ docker run --name mongodb -e ALLOW_EMPTY_PASSWORD=yes -e MONGODB_ENABLE_JOURNAL=true bitnami/mongodb:latest
 ```
 
 or by modifying the [`docker-compose.yml`](https://github.com/bitnami/bitnami-docker-mongodb/blob/master/docker-compose.yml) file present in this repository:
@@ -288,7 +288,7 @@ services:
   mongodb:
   ...
     environment:
-      - ALLOW_EMPTY_PASSWORDS=yes
+      - ALLOW_EMPTY_PASSWORD=yes
       - MONGODB_ENABLE_JOURNAL=true
   ...
 ```
@@ -317,7 +317,7 @@ The `root` user is configured to have full administrative access to the MongoDB&
 
 ## Creating users and databases on first run
 
-You can create users with restricted access to databases while starting the container for the first time. To do this, provide the `MONGODB_USERNAMES`, `MONGODB_PASSWORDS` and `MONGODB_DATABASES` environment variables. In these variables, the characters `,` and `;` are used as field separators. You *must* provide as many usernames, as passwords and databases through these variables.
+You can create users with restricted access to databases while starting the container for the first time. To do this, provide the `MONGODB_USERNAMES`, `MONGODB_PASSWORDS` and `MONGODB_DATABASES` environment variables. In these variables, the characters `,` and `;` are used as field separators. If you do not provide database names in `MONGODB_USERDATABASES`, all users will be created in the default database. Otherwise, you *must* provide as many usernames, as passwords as databases through these variables, i.e. there should be as many items in all the lists that these variables represent.
 
 ```console
 $ docker run --name mongodb \
@@ -773,9 +773,9 @@ $ docker-compose up mongodb
 
 # Notable Changes
 
-## 3.6.23-r121, 4.0.26-r10, 4.2.15-r25, 4.4.8-r1
+## 3.6.23-r127, 4.0.26-r16, 4.2.15-r31, 4.4.8-r7
 
-- The variables `MONGODB_USERNAME`, `MONGODB_PASSWORD`, `MONGODB_DATABASE` and `ALLOW_EMPTY_PASSWORD` were renamed to `MONGODB_USERNAMES`, `MONGODB_PASSWORDS`, `MONGODB_DATABASES` and `ALLOW_EMPTY_PASSWORDS` (note the trailing `S`) to permit initialization of more than one database the first time that a container is run. The old variables are still recognised, but deprecation warnings are printed out. `MONGODB_USERNAMES`, `MONGODB_PASSWORDS`, `MONGODB_DATABASES` use the characters `,` and/or `;` as field delimiters for consistency with other Bitnami's images such as [OpenLDAP] or [Kafka]. This is a slightly breaking change, but it should only impact first time creation when still using the old variables.
+- The variables `MONGODB_USERNAME`, `MONGODB_PASSWORD` and `MONGODB_DATABASE` were renamed to `MONGODB_USERNAMES`, `MONGODB_PASSWORDS` and `MONGODB_DATABASES` (note the trailing `S`) to permit initialization of more than one database the first time that a container is run. The old variables are still recognised, but deprecation warnings are printed out. `MONGODB_USERNAMES`, `MONGODB_PASSWORDS`, `MONGODB_DATABASES` use the characters `,` and/or `;` as field delimiters for consistency with other Bitnami's images such as [OpenLDAP] or [Kafka]. This is a slightly breaking change, but it should only impact first time creation when still using the old variables.
 
   [OpenLDAP]:https://github.com/bitnami/bitnami-docker-openldap
   [Kafka]: https://github.com/bitnami/bitnami-docker-kafka
