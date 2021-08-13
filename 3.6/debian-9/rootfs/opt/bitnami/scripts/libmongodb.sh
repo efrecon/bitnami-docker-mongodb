@@ -26,9 +26,9 @@
 #########################
 mongodb_field_separator() {
     if printf %s\\n "$1" | grep -q ','; then
-        printf %s\\n ','
+        echo ','
     elif printf %s\\n "$1" | grep -q ';'; then
-        printf %s\\n ';'
+        echo ';'
     fi
 }
 
@@ -154,18 +154,27 @@ Available options are 'primary/secondary/arbiter/hidden'"
         # When the list of database is empty, then all users will be added to
         # default database.
         if [[ -z "$MONGODB_DATABASES" ]]; then
-            info "All users specified in MONGODB_USERNAMES will be added to the default database"
+            warn "All users specified in MONGODB_USERNAMES will be added to the default database called 'test'"
         fi
     fi
 
     # Verify empty passwords
     if is_boolean_yes "$ALLOW_EMPTY_PASSWORD"; then
         warn "You set the environment variable ALLOW_EMPTY_PASSWORD=${ALLOW_EMPTY_PASSWORD}. For safety reasons, do not use this flag in a production environment."
-    elif [[ -n "$MONGODB_USERNAMES" ]]; then
+    elif [[ -n "$MONGODB_USERNAMES" ]] && [[ -z "$MONGODB_ROOT_PASSWORD" ]]; then
+        # Authorization is turned on as soon as set of users or a root password
+        # are given. If we have a set of users, but an empty root password,
+        # validation should fail unless ALLOW_EMPTY_PASSWORD is turned on.
+        error_message="The MONGODB_ROOT_PASSWORD environment variable is empty or not set. Set the environment variable ALLOW_EMPTY_PASSWORD=yes to allow the container to be started with a blank root password. This is only recommended for development."
+        print_validation_error "$error_message"
+    fi
+
+    # Warn for users with empty passwords, as these won't be created. Maybe
+    # should we just end with an error here instead?
+    if [[ -n "$MONGODB_USERNAMES" ]]; then
         for (( i=0; i<${#passwords[@]}; i++ )); do
             if [[ -z "${passwords[i]}" ]]; then
-                error_message="The password for user ${usernames[i]} is empty or not set. Set the environment variable ALLOW_EMPTY_PASSWORD=yes to allow the container to be started with blank passwords. This is only recommended for development."
-                print_validation_error "$error_message"
+                warn "User ${usernames[i]} will not be created as its password is empty or not set. MongoDB cannot create users with blank passwords."
             fi
         done            
     fi
