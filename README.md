@@ -317,7 +317,7 @@ The `root` user is configured to have full administrative access to the MongoDB&
 
 ## Creating users and databases on first run
 
-You can create users with restricted access to databases while starting the container for the first time. To do this, provide the `MONGODB_USERNAMES`, `MONGODB_PASSWORDS` and `MONGODB_DATABASES` environment variables. In these variables, the characters `,` and `;` are used as field separators. If you do not provide database names in `MONGODB_USERDATABASES`, all users will be created in the default database. Otherwise, you *must* provide as many usernames, as passwords as databases through these variables, i.e. there should be as many items in all the lists that these variables represent.
+You can create users with restricted access to databases while starting the container for the first time. To do this, provide the `MONGODB_USERNAMES`, `MONGODB_PASSWORDS` and `MONGODB_DATABASES` environment variables. In these variables, the characters `,` and `;` are used as field separators. If you do not provide database names in `MONGODB_DATABASES`, all users will be created in the default database called `test`. Otherwise, you *must* provide as many usernames, as passwords as databases through these variables, i.e. there should be as many items in all the lists that these variables represent.
 
 ```console
 $ docker run --name mongodb \
