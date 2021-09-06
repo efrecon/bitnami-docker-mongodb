@@ -48,10 +48,11 @@ Non-root container images add an extra layer of security and are generally recom
 Learn more about the Bitnami tagging policy and the difference between rolling tags and immutable tags [in our documentation page](https://docs.bitnami.com/tutorials/understand-rolling-tags-containers/).
 
 
-* [`4.4`, `4.4-debian-10`, `4.4.7`, `4.4.7-debian-10-r12`, `latest` (4.4/debian-10/Dockerfile)](https://github.com/bitnami/bitnami-docker-mongodb/blob/4.4.7-debian-10-r12/4.4/debian-10/Dockerfile)
-* [`4.2`, `4.2-debian-10`, `4.2.15`, `4.2.15-debian-10-r18` (4.2/debian-10/Dockerfile)](https://github.com/bitnami/bitnami-docker-mongodb/blob/4.2.15-debian-10-r18/4.2/debian-10/Dockerfile)
-* [`4.0`, `4.0-debian-9`, `4.0.26`, `4.0.26-debian-9-r3` (4.0/debian-9/Dockerfile)](https://github.com/bitnami/bitnami-docker-mongodb/blob/4.0.26-debian-9-r3/4.0/debian-9/Dockerfile)
-* [`3.6`, `3.6-debian-9`, `3.6.23`, `3.6.23-debian-9-r114` (3.6/debian-9/Dockerfile)](https://github.com/bitnami/bitnami-docker-mongodb/blob/3.6.23-debian-9-r114/3.6/debian-9/Dockerfile)
+* [`5.0`, `5.0-debian-10`, `5.0.2`, `5.0.2-debian-10-r4` (5.0/debian-10/Dockerfile)](https://github.com/bitnami/bitnami-docker-mongodb/blob/5.0.2-debian-10-r4/5.0/debian-10/Dockerfile)
+* [`4.4`, `4.4-debian-10`, `4.4.8`, `4.4.8-debian-10-r35`, `latest` (4.4/debian-10/Dockerfile)](https://github.com/bitnami/bitnami-docker-mongodb/blob/4.4.8-debian-10-r35/4.4/debian-10/Dockerfile)
+* [`4.2`, `4.2-debian-10`, `4.2.15`, `4.2.15-debian-10-r59` (4.2/debian-10/Dockerfile)](https://github.com/bitnami/bitnami-docker-mongodb/blob/4.2.15-debian-10-r59/4.2/debian-10/Dockerfile)
+* [`4.0`, `4.0-debian-9`, `4.0.26`, `4.0.26-debian-9-r43` (4.0/debian-9/Dockerfile)](https://github.com/bitnami/bitnami-docker-mongodb/blob/4.0.26-debian-9-r43/4.0/debian-9/Dockerfile)
+* [`3.6`, `3.6-debian-9`, `3.6.23`, `3.6.23-debian-9-r154` (3.6/debian-9/Dockerfile)](https://github.com/bitnami/bitnami-docker-mongodb/blob/3.6.23-debian-9-r154/3.6/debian-9/Dockerfile)
 
 Subscribe to project updates by watching the [bitnami/mongodb GitHub repo](https://github.com/bitnami/bitnami-docker-mongodb).
 
@@ -175,7 +176,7 @@ $ docker-compose up -d
 
 ## Initializing a new instance
 
-When the container is executed for the first time, it will execute the files with extensions `.sh`, `.js` and `.js.gz` located at `/docker-entrypoint-initdb.d`. Files with extension `.sh` and that are executable will be executed, otherwise they will be sourced. When authentication is turned on (see [below](#setting-the-root-password-on-first-run)) files with extension `.js` will be run authorized as the root user, if present, alternatively the first user of the `MONGODB_USERNAMES` list. File with extension `.js.gz` will be decompressed before run as files with extension `.js`. All relevant files at `/docker-entrypoint-initdb.d` are treated in alphabetical order.
+When the container is executed for the first time, it will execute the files with extensions `.sh`, `.js` and `.js.gz` located at `/docker-entrypoint-initdb.d`. Files with extension `.sh` and that are executable will be executed, otherwise they will be sourced. When authentication is turned on (see [below](#setting-the-root-password-on-first-run)) files with extension `.js` will be run authorized as the root user, if present, alternatively the user from `MONGODB_USERNAME` or the first user of the list in `MONGODB_EXTRA_USERNAMES`. File with extension `.js.gz` will be decompressed before run as files with extension `.js`. All relevant files at `/docker-entrypoint-initdb.d` are treated in alphabetical order.
 
 In order to have your custom files inside the docker image you can mount them as a volume.
 
@@ -224,6 +225,10 @@ services:
       - MONGODB_SYSTEM_LOG_VERBOSITY=3
   ...
 ```
+
+## Using numactl
+
+  In order to enable launching commands using numactl, set the `MONGODB_ENABLE_NUMACTL` variable to true. For more information on this, check the official [MongoDB documentation][(https://docs.mongodb.com/manual/administration/production-notes/#configuring-numa-on-linux)
 
 ## Enabling/disabling IPv6
 
@@ -317,12 +322,17 @@ The `root` user is configured to have full administrative access to the MongoDB&
 
 ## Creating users and databases on first run
 
-You can create users with restricted access to databases while starting the container for the first time. To do this, provide the `MONGODB_USERNAMES`, `MONGODB_PASSWORDS` and `MONGODB_DATABASES` environment variables. In these variables, the characters `,` and `;` are used as field separators. If you do not provide database names in `MONGODB_DATABASES`, all users will be created in the default database called `test`. Otherwise, you *must* provide as many usernames, as passwords as databases through these variables, i.e. there should be as many items in all the lists that these variables represent.
+You can create users with restricted access to databases while starting the container for the first time. There are two ways to do this, for backwards compatibility reasons.
+
+- You can provide username and password information through the `MONGODB_USERNAME` and `MONGODB_PASSWORD` environment variables. To specify the database that this user will have access to, you can provide its name in `MONGODB_DATABASE`. When the value of `MONGODB_DATABASE` is empty, the user will be provided access to the default database called `test`.
+- When you need to create more than one user, you can provide the `MONGODB_EXTRA_USERNAMES`, `MONGODB_EXTRA_PASSWORDS` and `MONGODB_EXTRA_DATABASES` environment variables. In these variables, the characters `,` and `;` are used as field separators. If you do not provide database names in `MONGODB_DATABASES`, all users will be created in the default database called `test`. Otherwise, you *must* provide as many usernames, as passwords as databases through these variables, i.e. there should be as many items in all the lists that these variables represent. When the list in `MONGODB_EXTRA_DATABASES` contains an empty name, the corresponding user will be created in the default database called `test`. As the characters `,` and `;` are used as field separators, these cannot appear in the values of the usernames, passwords and databases created using these environment variables.
 
 ```console
 $ docker run --name mongodb \
-  -e MONGODB_USERNAMES=my_user -e MONGODB_PASSWORDS=password123 \
-  -e MONGODB_DATABASES=my_database bitnami/mongodb:latest
+  -e ALLOW_EMPTY_PASSWORD=yes \
+  -e MONGODB_USERNAME=my_user \
+  -e MONGODB_PASSWORD=password123 \
+  -e MONGODB_DATABASE=my_database bitnami/mongodb:latest
 ```
 
 You can also modify the [`docker-compose.yml`](https://github.com/bitnami/bitnami-docker-mongodb/blob/master/docker-compose.yml) file present in this repository as in the example below. This would create a user `my_user1` with access to the database `my_database1` and a user `my_user2` with access to the database `my_database2`. Note the use of two different field delimiters.
@@ -332,14 +342,29 @@ services:
   mongodb:
   ...
     environment:
-      - MONGODB_USERNAMES=my_user1,my_user2
-      - MONGODB_PASSWORDS=password123,password321
-      - MONGODB_DATABASES=my_database1;my_database2
+      - ALLOW_EMPTY_PASSWORD=yes
+      - MONGODB_EXTRA_USERNAMES=my_user1,my_user2
+      - MONGODB_EXTRA_PASSWORDS=password123,password321
+      - MONGODB_EXTRA_DATABASES=my_database1;my_database2
   ...
 ```
 
 **Note!**
 Creation of a user enables authentication on the MongoDB&reg; server and as a result unauthenticated access by *any* user is not permitted.
+
+## Using files instead of litterals
+
+When an environment variable ending with `_FILE` is found, and if its name without the `_FILE` suffix is recognised by this image, the value of the environment variable without the `_FILE` suffix will be read from the file path that it points at. This feature can be used to access Docker or Kubernetes secrets, for example.
+
+Provided a file at `/run/secrets/password` with the content `password123` (without a terminating line ending), the following example would create a user called `my_user` with password `password123` and with access to the database `my_database`:
+
+```console
+$ docker run --name mongodb \
+  -e ALLOW_EMPTY_PASSWORD=yes \
+  -e MONGODB_USERNAME=my_user \
+  -e MONGODB_PASSWORD_FILE=/run/secrets/password \
+  -e MONGODB_DATABASE=my_database bitnami/mongodb:latest
+```
 
 ## Setting up replication
 
@@ -773,12 +798,18 @@ $ docker-compose up mongodb
 
 # Notable Changes
 
-## 3.6.23-r127, 4.0.26-r16, 4.2.15-r31, 4.4.8-r7
+## 3.6.23-debian-9-r155, 4.0.26-debian-9-r44, 4.2.15-debian-10-r60, 4.4.8-debian-10-r36, 5.0.2-debian-10-r5
 
-- The variables `MONGODB_USERNAME`, `MONGODB_PASSWORD` and `MONGODB_DATABASE` were renamed to `MONGODB_USERNAMES`, `MONGODB_PASSWORDS` and `MONGODB_DATABASES` (note the trailing `S`) to permit initialization of more than one database the first time that a container is run. The old variables are still recognised, but deprecation warnings are printed out. `MONGODB_USERNAMES`, `MONGODB_PASSWORDS`, `MONGODB_DATABASES` use the characters `,` and/or `;` as field delimiters for consistency with other Bitnami's images such as [OpenLDAP] or [Kafka]. This is a slightly breaking change, but it should only impact first time creation when still using the old variables.
+- The variables `MONGODB_EXTRA_USERNAMES`, `MONGODB_EXTRA_PASSWORDS` and `MONGODB_EXTRA_DATABASES` were added to permit initialization of more than one database the first time that a container is run. `MONGODB_EXTRA_USERNAMES`, `MONGODB_EXTRA_PASSWORDS`, `MONGODB_EXTRA_DATABASES` use the characters `,` and/or `;` as field delimiters for consistency with other Bitnami's images such as [OpenLDAP] or [Kafka]. It is still possible to use the variables from prior versions if necessary: `MONGODB_USERNAME`, `MONGODB_PASSWORD` and `MONGODB_DATABASE`.
+- When specifying extra users, an empty database name will be understood as the Mongo default database called `test`.
+- It is not possible to create extra users with an empty password, this is a Mongo limitation.
 
   [OpenLDAP]:https://github.com/bitnami/bitnami-docker-openldap
   [Kafka]: https://github.com/bitnami/bitnami-docker-kafka
+
+## 4.4.8-debian-10-r31, and 5.0.2-debian-10-r0
+
+- From now on, "Default Write Concern" need to be set before adding new members (secondary, arbiter or hidden) to the cluster. In order to maintain the safest default configuration, `{"setDefaultRWConcern" : 1, "defaultWriteConcern" : {"w" : "majority"}}` is configured before adding new members. See https://docs.mongodb.com/manual/reference/command/setDefaultRWConcern/ and https://docs.mongodb.com/v5.0/reference/mongodb-defaults/#default-write-concern
 
 ## 3.6.14-r69, 4.0.13-r11, and 4.2.1-r12
 
@@ -808,6 +839,10 @@ $ docker-compose up mongodb
 
 - All volumes have been merged at `/bitnami/mongodb`. Now you only need to mount a single volume at `/bitnami/mongodb` for persistence.
 - The logs are always sent to the `stdout` and are no longer collected in the volume.
+
+# Branch Deprecation Notice
+
+MongoDB&reg;'s branch 3.6 is no longer maintained by upstream and is now internally tagged as to be deprecated. This branch will no longer be released in our catalog a month after this notice is published, but already released container images will still persist in the registries. Valid to be removed starting on: 10-02-2021.
 
 # Contributing
 
