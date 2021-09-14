@@ -246,7 +246,7 @@ get_mongo_hostname() {
 mongodb_drop_local_database() {
     info "Dropping local database to reset replica set setup..."
 
-    local command=("mongodb_execute")
+    local command=("mongodb_concealed_execute")
 
     if [[ -n "$MONGODB_USERNAME" ]] || [[ -n "$MONGODB_EXTRA_USERNAMES" ]]; then
         local usernames passwords databases
@@ -618,7 +618,6 @@ mongodb_set_replicasetmode_conf() {
 #   None
 #########################
 mongodb_create_user() {
-    local result
     local -r user="${1:?user is required}"
     local -r password="${2:-}"
     local -r database="${3:-}"
@@ -633,7 +632,7 @@ mongodb_create_user() {
     [[ -z "$database" ]] && query="db.getSiblingDB(db.stats().db).createUser({ user: '$user', pwd: '$password', roles: [{role: 'readWrite', db: db.getSiblingDB(db.stats().db).stats().db }] })"
     # Create user, discarding mongo CLI output for clean logs
     info "Creating user '$user'..."
-    result=$(mongodb_execute 'root' "$MONGODB_ROOT_PASSWORD" "" "127.0.0.1" <<< "$query")
+    mongodb_concealed_execute "$MONGODB_ROOT_USER" "$MONGODB_ROOT_PASSWORD" "" "127.0.0.1" <<< "$query"
 }
 
 ########################
@@ -646,16 +645,12 @@ mongodb_create_user() {
 #   None
 #########################
 mongodb_create_users() {
-    local result
-
     info "Creating users..."
     if [[ -n "$MONGODB_ROOT_PASSWORD" ]] && ! [[ "$MONGODB_REPLICA_SET_MODE" =~ ^(secondary|arbiter|hidden) ]]; then
-        info "Creating root user..."
-        result=$(
-            mongodb_execute "" "" "" "127.0.0.1" <<EOF
-db.getSiblingDB('admin').createUser({ user: 'root', pwd: '$MONGODB_ROOT_PASSWORD', roles: [{role: 'root', db: 'admin'}] })
+        info "Creating $MONGODB_ROOT_USER user..."
+        mongodb_concealed_execute "" "" "" "127.0.0.1" <<EOF
+db.getSiblingDB('admin').createUser({ user: '$MONGODB_ROOT_USER', pwd: '$MONGODB_ROOT_PASSWORD', roles: [{role: 'root', db: 'admin'}] })
 EOF
-        )
     fi
 
     if [[ -n "$MONGODB_USERNAME" ]]; then
@@ -744,7 +739,7 @@ mongodb_is_primary_node_initiated() {
     local node="${1:?node is required}"
     local result
     result=$(
-        mongodb_execute "root" "$MONGODB_ROOT_PASSWORD" "admin" "127.0.0.1" "$MONGODB_PORT_NUMBER" <<EOF
+        mongodb_execute "$MONGODB_ROOT_USER" "$MONGODB_ROOT_PASSWORD" "admin" "127.0.0.1" "$MONGODB_PORT_NUMBER" <<EOF
 rs.initiate({"_id":"$MONGODB_REPLICA_SET_NAME", "members":[{"_id":0,"host":"$node:$MONGODB_PORT_NUMBER","priority":5}]})
 EOF
     )
@@ -1359,10 +1354,10 @@ mongodb_custom_init_scripts() {
         local mongo_user
         local mongo_pass
         if [[ -n "$MONGODB_ROOT_PASSWORD" ]]; then
-            mongo_user=root
+            mongo_user="$MONGODB_ROOT_USER"
             mongo_pass="$MONGODB_ROOT_PASSWORD"
         elif [[ -n "$MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD" ]]; then
-            mongo_user=root
+            mongo_user="$MONGODB_ROOT_USER"
             mongo_pass="$MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD"
         else
             local databases usernames passwords
@@ -1410,7 +1405,7 @@ mongodb_custom_init_scripts() {
 #   $5 - Port (default $MONGODB_PORT_NUMBER)
 #   $6 - Extra arguments (default $MONGODB_CLIENT_EXTRA_FLAGS)
 # Returns:
-#   None
+#   output of mongo query
 ########################
 mongodb_execute() {
     local -r user="${1:-}"
@@ -1434,4 +1429,25 @@ mongodb_execute() {
     [[ -n "$database" ]] && args+=("$database")
 
     "$MONGODB_BIN_DIR/mongo" "${args[@]}"
+}
+
+########################
+# Execute an arbitrary query/queries against the running MongoDB service,
+# discard its output unless BITNAMI_DEBUG is true
+# Stdin:
+#   Query/queries to execute
+# Globals:
+#   BITNAMI_DEBUG
+# Arguments:
+#   $1 - User to run queries
+#   $2 - Password
+#   $3 - Database where to run the queries
+#   $4 - Host (default to result of get_mongo_hostname function)
+#   $5 - Port (default $MONGODB_PORT_NUMBER)
+#   $6 - Extra arguments (default $MONGODB_CLIENT_EXTRA_FLAGS)
+# Returns:
+#   None
+########################
+mongodb_concealed_execute() {
+    debug_execute mongodb_execute "$@"
 }
