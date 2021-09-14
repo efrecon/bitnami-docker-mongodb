@@ -607,47 +607,33 @@ mongodb_set_replicasetmode_conf() {
 }
 
 ########################
-# Create the appropriate users
+# Create a MongoDB user and provide read/write permissions on a database
 # Globals:
 #   MONGODB_ROOT_PASSWORD
 # Arguments:
-#   $1 Name of user
-#   $2 Password for user
-#   $3 Name of database (empty for default database)
+#   $1 - Name of user
+#   $2 - Password for user
+#   $3 - Name of database (empty for default database)
 # Returns:
 #   None
 #########################
 mongodb_create_user() {
     local result
+    local -r user="${1:?user is required}"
+    local -r password="${2:-}"
+    local -r database="${3:-}"
+    local query
 
-    if [[ -n "${3:-}" ]]; then
-        # MongoDB refuses to create users without passwords. It would
-        # return the following otherwise:
-        # Error: couldn't add user: User passwords must not be empty
-        if [[ -n "${2:-}" ]]; then
-            info "Creating user '$1' in database '$3'..."
-
-            result=$(
-                mongodb_execute 'root' "$MONGODB_ROOT_PASSWORD" "" "127.0.0.1" <<EOF
-db.getSiblingDB('$3').createUser({ user: '$1', pwd: '$2', roles: [{role: 'readWrite', db: '$3'}] })
-EOF
-            )
-        else
-            warn "Cannot create user $1, no password provided"
-        fi
-    else
-        if [[ -n "${2:-}" ]]; then
-            info "Creating user '$1' in default database..."
-
-            result=$(
-                mongodb_execute 'root' "$MONGODB_ROOT_PASSWORD" "" "127.0.0.1" <<EOF
-db.getSiblingDB(db.stats().db).createUser({ user: '$1', pwd: '$2', roles: [{role: 'readWrite', db: db.getSiblingDB(db.stats().db).stats().db }] })
-EOF
-            )
-        else
-            warn "Cannot create user $1, no password provided"
-        fi
+    if [[ -z "$password" ]]; then
+        warn "Cannot create user '$user', no password provided"
+        return 0
     fi
+    # Build proper query (default database or specific one)
+    query="db.getSiblingDB('$database').createUser({ user: '$user', pwd: '$password', roles: [{role: 'readWrite', db: '$database'}] })"
+    [[ -z "$database" ]] && query="db.getSiblingDB(db.stats().db).createUser({ user: '$user', pwd: '$password', roles: [{role: 'readWrite', db: db.getSiblingDB(db.stats().db).stats().db }] })"
+    # Create user, discarding mongo CLI output for clean logs
+    info "Creating user '$user'..."
+    result=$(mongodb_execute 'root' "$MONGODB_ROOT_PASSWORD" "" "127.0.0.1" <<< "$query")
 }
 
 ########################
@@ -673,17 +659,7 @@ EOF
     fi
 
     if [[ -n "$MONGODB_USERNAME" ]]; then
-        local databases usernames passwords
-
-        # Fill in arrays called databases, usernames and passwords with
-        # information from matching environment variables, there will only be
-        # one element at max in them.
-        mongodb_auth single
-        if [[ -n "$MONGODB_DATABASE" ]]; then
-            mongodb_create_user "${usernames[0]}" "${passwords[0]}" "${databases[0]}"
-        else
-            mongodb_create_user "${usernames[0]}" "${passwords[0]}"
-        fi
+        mongodb_create_user "$MONGODB_USERNAME" "$MONGODB_PASSWORD" "$MONGODB_DATABASE"
     fi
     if [[ -n "$MONGODB_EXTRA_USERNAMES" ]]; then
         local databases usernames passwords
