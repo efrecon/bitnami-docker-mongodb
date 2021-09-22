@@ -48,11 +48,11 @@ Non-root container images add an extra layer of security and are generally recom
 Learn more about the Bitnami tagging policy and the difference between rolling tags and immutable tags [in our documentation page](https://docs.bitnami.com/tutorials/understand-rolling-tags-containers/).
 
 
-* [`5.0`, `5.0-debian-10`, `5.0.2`, `5.0.2-debian-10-r10` (5.0/debian-10/Dockerfile)](https://github.com/bitnami/bitnami-docker-mongodb/blob/5.0.2-debian-10-r10/5.0/debian-10/Dockerfile)
-* [`4.4`, `4.4-debian-10`, `4.4.8`, `4.4.8-debian-10-r43`, `latest` (4.4/debian-10/Dockerfile)](https://github.com/bitnami/bitnami-docker-mongodb/blob/4.4.8-debian-10-r43/4.4/debian-10/Dockerfile)
-* [`4.2`, `4.2-debian-10`, `4.2.16`, `4.2.16-debian-10-r4` (4.2/debian-10/Dockerfile)](https://github.com/bitnami/bitnami-docker-mongodb/blob/4.2.16-debian-10-r4/4.2/debian-10/Dockerfile)
-* [`4.0`, `4.0-debian-9`, `4.0.27`, `4.0.27-debian-9-r3` (4.0/debian-9/Dockerfile)](https://github.com/bitnami/bitnami-docker-mongodb/blob/4.0.27-debian-9-r3/4.0/debian-9/Dockerfile)
-* [`3.6`, `3.6-debian-9`, `3.6.23`, `3.6.23-debian-9-r162` (3.6/debian-9/Dockerfile)](https://github.com/bitnami/bitnami-docker-mongodb/blob/3.6.23-debian-9-r162/3.6/debian-9/Dockerfile)
+* [`5.0`, `5.0-debian-10`, `5.0.3`, `5.0.3-debian-10-r2` (5.0/debian-10/Dockerfile)](https://github.com/bitnami/bitnami-docker-mongodb/blob/5.0.3-debian-10-r2/5.0/debian-10/Dockerfile)
+* [`4.4`, `4.4-debian-10`, `4.4.9`, `4.4.9-debian-10-r3`, `latest` (4.4/debian-10/Dockerfile)](https://github.com/bitnami/bitnami-docker-mongodb/blob/4.4.9-debian-10-r3/4.4/debian-10/Dockerfile)
+* [`4.2`, `4.2-debian-10`, `4.2.17`, `4.2.17-debian-10-r0` (4.2/debian-10/Dockerfile)](https://github.com/bitnami/bitnami-docker-mongodb/blob/4.2.17-debian-10-r0/4.2/debian-10/Dockerfile)
+* [`4.0`, `4.0-debian-9`, `4.0.27`, `4.0.27-debian-9-r12` (4.0/debian-9/Dockerfile)](https://github.com/bitnami/bitnami-docker-mongodb/blob/4.0.27-debian-9-r12/4.0/debian-9/Dockerfile)
+* [`3.6`, `3.6-debian-9`, `3.6.23`, `3.6.23-debian-9-r170` (3.6/debian-9/Dockerfile)](https://github.com/bitnami/bitnami-docker-mongodb/blob/3.6.23-debian-9-r170/3.6/debian-9/Dockerfile)
 
 Subscribe to project updates by watching the [bitnami/mongodb GitHub repo](https://github.com/bitnami/bitnami-docker-mongodb).
 

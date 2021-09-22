@@ -199,6 +199,10 @@ Available options are 'primary/secondary/arbiter/hidden'"
     if [[ -n "$MONGODB_USERNAME" ]] && [[ -z "$MONGODB_PASSWORD" ]]; then
         warn "User $MONGODB_USERNAME will not be created as its password is empty or not set. MongoDB cannot create users with blank passwords."
     fi
+    if ! is_boolean_yes "$ALLOW_EMPTY_PASSWORD" && [[ -n "$MONGODB_METRICS_USERNAME" ]] && [[ -z "$MONGODB_METRICS_PASSWORD" ]]; then
+        error_message="The MONGODB_METRICS_PASSWORD environment variable is empty or not set. Set the environment variable ALLOW_EMPTY_PASSWORD=yes to allow the container to be started with blank passwords. This is only recommended for development."
+        print_validation_error "$error_message"
+    fi
 
     [[ "$error_code" -eq 0 ]] || exit "$error_code"
 }
@@ -246,7 +250,7 @@ get_mongo_hostname() {
 mongodb_drop_local_database() {
     info "Dropping local database to reset replica set setup..."
 
-    local command=("mongodb_concealed_execute")
+    local command=("mongodb_execute")
 
     if [[ -n "$MONGODB_USERNAME" ]] || [[ -n "$MONGODB_EXTRA_USERNAMES" ]]; then
         local usernames passwords databases
@@ -332,13 +336,13 @@ mongodb_start_bg() {
     is_mongodb_running && return
 
     if am_i_root; then
-        if [ "${MONGODB_ENABLE_NUMACTL}" = true ]; then
+        if is_boolean_yes "$MONGODB_ENABLE_NUMACTL"; then
             debug_execute gosu "$MONGODB_DAEMON_USER" numactl --interleave=all "$MONGODB_BIN_DIR/mongod" "${flags[@]}"
         else
             debug_execute gosu "$MONGODB_DAEMON_USER" "$MONGODB_BIN_DIR/mongod" "${flags[@]}"
         fi
     else
-        if [ "${MONGODB_ENABLE_NUMACTL}" = true ]; then
+        if is_boolean_yes "$MONGODB_ENABLE_NUMACTL"; then
             debug_execute numactl --interleave=all "$MONGODB_BIN_DIR/mongod" "${flags[@]}"
         else
             debug_execute "$MONGODB_BIN_DIR/mongod" "${flags[@]}"
@@ -365,7 +369,7 @@ mongodb_is_mongodb_started() {
     local result
 
     result=$(
-        mongodb_execute 2>/dev/null <<EOF
+        mongodb_execute_print_output 2>/dev/null <<EOF
 db
 EOF
     )
@@ -632,7 +636,7 @@ mongodb_create_user() {
     [[ -z "$database" ]] && query="db.getSiblingDB(db.stats().db).createUser({ user: '$user', pwd: '$password', roles: [{role: 'readWrite', db: db.getSiblingDB(db.stats().db).stats().db }] })"
     # Create user, discarding mongo CLI output for clean logs
     info "Creating user '$user'..."
-    mongodb_concealed_execute "$MONGODB_ROOT_USER" "$MONGODB_ROOT_PASSWORD" "" "127.0.0.1" <<< "$query"
+    mongodb_execute "$MONGODB_ROOT_USER" "$MONGODB_ROOT_PASSWORD" "" "127.0.0.1" <<< "$query"
 }
 
 ########################
@@ -648,7 +652,7 @@ mongodb_create_users() {
     info "Creating users..."
     if [[ -n "$MONGODB_ROOT_PASSWORD" ]] && ! [[ "$MONGODB_REPLICA_SET_MODE" =~ ^(secondary|arbiter|hidden) ]]; then
         info "Creating $MONGODB_ROOT_USER user..."
-        mongodb_concealed_execute "" "" "" "127.0.0.1" <<EOF
+        mongodb_execute "" "" "" "127.0.0.1" <<EOF
 db.getSiblingDB('admin').createUser({ user: '$MONGODB_ROOT_USER', pwd: '$MONGODB_ROOT_PASSWORD', roles: [{role: 'root', db: 'admin'}] })
 EOF
     fi
@@ -674,6 +678,16 @@ EOF
                 mongodb_create_user "${usernames[i]}" "${passwords[i]}"
             done
         fi
+    fi
+
+    if [[ -n "$MONGODB_METRICS_USERNAME" ]] && [[ -n "$MONGODB_METRICS_PASSWORD" ]]; then
+        info "Creating '$MONGODB_METRICS_USERNAME' user..."
+
+        result=$(
+            mongodb_execute_print_output 'root' "$MONGODB_ROOT_PASSWORD" "" "127.0.0.1" <<EOF
+db.getSiblingDB('admin').createUser({ user: '$MONGODB_METRICS_USERNAME', pwd: '$MONGODB_METRICS_PASSWORD', roles: [{role: 'clusterMonitor', db: 'admin'},{ role: 'read', db: 'local' }] })
+EOF
+        )
     fi
     info "Users created"
 }
@@ -739,7 +753,7 @@ mongodb_is_primary_node_initiated() {
     local node="${1:?node is required}"
     local result
     result=$(
-        mongodb_execute "$MONGODB_ROOT_USER" "$MONGODB_ROOT_PASSWORD" "admin" "127.0.0.1" "$MONGODB_PORT_NUMBER" <<EOF
+        mongodb_execute_print_output "$MONGODB_ROOT_USER" "$MONGODB_ROOT_PASSWORD" "admin" "127.0.0.1" "$MONGODB_PORT_NUMBER" <<EOF
 rs.initiate({"_id":"$MONGODB_REPLICA_SET_NAME", "members":[{"_id":0,"host":"$node:$MONGODB_PORT_NUMBER","priority":5}]})
 EOF
     )
@@ -771,7 +785,7 @@ mongodb_set_dwc() {
     local result
 
     result=$(
-        mongodb_execute "$MONGODB_INITIAL_PRIMARY_ROOT_USER" "$MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD" "admin" "$MONGODB_INITIAL_PRIMARY_HOST" "$MONGODB_INITIAL_PRIMARY_PORT_NUMBER" <<EOF
+        mongodb_execute_print_output "$MONGODB_INITIAL_PRIMARY_ROOT_USER" "$MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD" "admin" "$MONGODB_INITIAL_PRIMARY_HOST" "$MONGODB_INITIAL_PRIMARY_PORT_NUMBER" <<EOF
 db.adminCommand({"setDefaultRWConcern" : 1, "defaultWriteConcern" : {"w" : "majority"}})
 EOF
     )
@@ -799,7 +813,7 @@ mongodb_is_secondary_node_pending() {
     mongodb_set_dwc
 
     result=$(
-        mongodb_execute "$MONGODB_INITIAL_PRIMARY_ROOT_USER" "$MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD" "admin" "$MONGODB_INITIAL_PRIMARY_HOST" "$MONGODB_INITIAL_PRIMARY_PORT_NUMBER" <<EOF
+        mongodb_execute_print_output "$MONGODB_INITIAL_PRIMARY_ROOT_USER" "$MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD" "admin" "$MONGODB_INITIAL_PRIMARY_HOST" "$MONGODB_INITIAL_PRIMARY_PORT_NUMBER" <<EOF
 rs.add('$node:$MONGODB_PORT_NUMBER')
 EOF
     )
@@ -829,7 +843,7 @@ mongodb_is_hidden_node_pending() {
     mongodb_set_dwc
 
     result=$(
-        mongodb_execute "$MONGODB_INITIAL_PRIMARY_ROOT_USER" "$MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD" "admin" "$MONGODB_INITIAL_PRIMARY_HOST" "$MONGODB_INITIAL_PRIMARY_PORT_NUMBER" <<EOF
+        mongodb_execute_print_output "$MONGODB_INITIAL_PRIMARY_ROOT_USER" "$MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD" "admin" "$MONGODB_INITIAL_PRIMARY_HOST" "$MONGODB_INITIAL_PRIMARY_PORT_NUMBER" <<EOF
 rs.add({host: '$node:$MONGODB_PORT_NUMBER', hidden: true, priority: 0})
 EOF
     )
@@ -859,7 +873,7 @@ mongodb_is_arbiter_node_pending() {
     mongodb_set_dwc
 
     result=$(
-        mongodb_execute "$MONGODB_INITIAL_PRIMARY_ROOT_USER" "$MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD" "admin" "$MONGODB_INITIAL_PRIMARY_HOST" "$MONGODB_INITIAL_PRIMARY_PORT_NUMBER" <<EOF
+        mongodb_execute_print_output "$MONGODB_INITIAL_PRIMARY_ROOT_USER" "$MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD" "admin" "$MONGODB_INITIAL_PRIMARY_HOST" "$MONGODB_INITIAL_PRIMARY_PORT_NUMBER" <<EOF
 rs.addArb('$node:$MONGODB_PORT_NUMBER')
 EOF
     )
@@ -924,7 +938,7 @@ mongodb_is_primary_node_up() {
     debug "Validating $host as primary node..."
 
     result=$(
-        mongodb_execute "$user" "$password" "admin" "$host" "$port" <<EOF
+        mongodb_execute_print_output "$user" "$password" "admin" "$host" "$port" <<EOF
 db.isMaster().ismaster
 EOF
     )
@@ -948,7 +962,7 @@ mongodb_is_node_available() {
 
     local result
     result=$(
-        mongodb_execute "$user" "$password" "admin" "$host" "$MONGODB_INITIAL_PRIMARY_PORT_NUMBER" <<EOF
+        mongodb_execute_print_output "$user" "$password" "admin" "$host" "$MONGODB_INITIAL_PRIMARY_PORT_NUMBER" <<EOF
 db.getUsers()
 EOF
     )
@@ -1104,7 +1118,7 @@ mongodb_is_not_in_sync() {
     local result
 
     result=$(
-        mongodb_execute "$MONGODB_INITIAL_PRIMARY_ROOT_USER" "$MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD" "admin" "$MONGODB_INITIAL_PRIMARY_HOST" "$MONGODB_INITIAL_PRIMARY_PORT_NUMBER" <<EOF
+        mongodb_execute_print_output "$MONGODB_INITIAL_PRIMARY_ROOT_USER" "$MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD" "admin" "$MONGODB_INITIAL_PRIMARY_HOST" "$MONGODB_INITIAL_PRIMARY_PORT_NUMBER" <<EOF
 db.printSlaveReplicationInfo()
 EOF
     )
@@ -1146,7 +1160,7 @@ mongodb_node_currently_in_cluster() {
     local result
 
     result=$(
-        mongodb_execute "$MONGODB_INITIAL_PRIMARY_ROOT_USER" "$MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD" "admin" "$MONGODB_INITIAL_PRIMARY_HOST" "$MONGODB_INITIAL_PRIMARY_PORT_NUMBER" <<EOF
+        mongodb_execute_print_output "$MONGODB_INITIAL_PRIMARY_ROOT_USER" "$MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD" "admin" "$MONGODB_INITIAL_PRIMARY_HOST" "$MONGODB_INITIAL_PRIMARY_PORT_NUMBER" <<EOF
 rs.status().members
 EOF
     )
@@ -1380,11 +1394,11 @@ mongodb_custom_init_scripts() {
                 ;;
             *.js)
                 debug "Executing $f"
-                mongodb_execute "$mongo_user" "$mongo_pass" <"$f"
+                mongodb_execute_print_output "$mongo_user" "$mongo_pass" <"$f"
                 ;;
             *.js.gz)
                 debug "Executing $f"
-                gunzip -c "$f" | mongodb_execute "$mongo_user" "$mongo_pass"
+                gunzip -c "$f" | mongodb_execute_print_output "$mongo_user" "$mongo_pass"
                 ;;
             *) debug "Ignoring $f" ;;
             esac
@@ -1407,7 +1421,7 @@ mongodb_custom_init_scripts() {
 # Returns:
 #   output of mongo query
 ########################
-mongodb_execute() {
+mongodb_execute_print_output() {
     local -r user="${1:-}"
     local -r password="${2:-}"
     local -r database="${3:-}"
@@ -1448,6 +1462,6 @@ mongodb_execute() {
 # Returns:
 #   None
 ########################
-mongodb_concealed_execute() {
-    debug_execute mongodb_execute "$@"
+mongodb_execute() {
+    debug_execute mongodb_execute_print_output "$@"
 }
