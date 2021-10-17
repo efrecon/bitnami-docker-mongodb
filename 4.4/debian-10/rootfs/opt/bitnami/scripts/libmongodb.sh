@@ -49,21 +49,29 @@ mongodb_field_separator() {
 mongodb_auth() {
     case "${1:-all}" in
         extra)
-            # Start by filling in databases, usernames and passwords arrays with the
-            # content of the _EXTRA_ environment variables.
-            IFS="$(mongodb_field_separator "$MONGODB_EXTRA_DATABASES")" read -r -a databases <<< "$MONGODB_EXTRA_DATABASES"
-            IFS="$(mongodb_field_separator "$MONGODB_EXTRA_USERNAMES")" read -r -a usernames <<< "$MONGODB_EXTRA_USERNAMES"
-            IFS="$(mongodb_field_separator "$MONGODB_EXTRA_PASSWORDS")" read -r -a passwords <<< "$MONGODB_EXTRA_PASSWORDS"
+            local -a databases_extra
+            local -a usernames_extra
+            local -a passwords_extra
+            # Start by filling in locally scoped databases, usernames and
+            # passwords arrays with the content of the _EXTRA_ environment
+            # variables.
+            IFS="$(mongodb_field_separator "$MONGODB_EXTRA_DATABASES")" read -r -a databases_extra <<< "$MONGODB_EXTRA_DATABASES"
+            IFS="$(mongodb_field_separator "$MONGODB_EXTRA_USERNAMES")" read -r -a usernames_extra <<< "$MONGODB_EXTRA_USERNAMES"
+            IFS="$(mongodb_field_separator "$MONGODB_EXTRA_PASSWORDS")" read -r -a passwords_extra <<< "$MONGODB_EXTRA_PASSWORDS"
             # Force missing empty passwords/database names (occurs when
             # MONGODB_EXTRA_PASSWORDS/DATABASES ends with a separator, e.g. a
-            # comma or semi-colon)
-            for (( i=0; i<${#usernames[@]}; i++ )); do
-                if [[ -z "${passwords[i]:-}" ]]; then
-                    passwords[i]=""
+            # comma or semi-colon), then copy into the databases, usernames and
+            # passwords arrays (global).
+            for (( i=0; i<${#usernames_extra[@]}; i++ )); do
+                if [[ -z "${passwords_extra[i]:-}" ]]; then
+                    passwords_extra[i]=""
                 fi
-                if [[ -z "${databases[i]:-}" ]]; then
-                    databases[i]=""
+                if [[ -z "${databases_extra[i]:-}" ]]; then
+                    databases_extra[i]=""
                 fi
+                databases+=("${databases_extra[i]}")
+                usernames+=("${usernames_extra[i]}")
+                passwords+=("${passwords_extra[i]}")
             done
             ;;
         single)
@@ -73,10 +81,10 @@ mongodb_auth() {
             passwords+=("$MONGODB_PASSWORD")
             ;;
         all)
-            # Perform the following in this order, and only this, since "extra"
-            # re-creates the array from scratch.
-            mongodb_auth extra
+            # Perform the following in this order to respect the priority of the
+            # environment variables.
             mongodb_auth single
+            mongodb_auth extra
             ;;
     esac
 }
