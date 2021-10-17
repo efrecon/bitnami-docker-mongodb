@@ -48,11 +48,10 @@ Non-root container images add an extra layer of security and are generally recom
 Learn more about the Bitnami tagging policy and the difference between rolling tags and immutable tags [in our documentation page](https://docs.bitnami.com/tutorials/understand-rolling-tags-containers/).
 
 
-* [`5.0`, `5.0-debian-10`, `5.0.3`, `5.0.3-debian-10-r2` (5.0/debian-10/Dockerfile)](https://github.com/bitnami/bitnami-docker-mongodb/blob/5.0.3-debian-10-r2/5.0/debian-10/Dockerfile)
-* [`4.4`, `4.4-debian-10`, `4.4.9`, `4.4.9-debian-10-r3`, `latest` (4.4/debian-10/Dockerfile)](https://github.com/bitnami/bitnami-docker-mongodb/blob/4.4.9-debian-10-r3/4.4/debian-10/Dockerfile)
-* [`4.2`, `4.2-debian-10`, `4.2.17`, `4.2.17-debian-10-r0` (4.2/debian-10/Dockerfile)](https://github.com/bitnami/bitnami-docker-mongodb/blob/4.2.17-debian-10-r0/4.2/debian-10/Dockerfile)
-* [`4.0`, `4.0-debian-9`, `4.0.27`, `4.0.27-debian-9-r12` (4.0/debian-9/Dockerfile)](https://github.com/bitnami/bitnami-docker-mongodb/blob/4.0.27-debian-9-r12/4.0/debian-9/Dockerfile)
-* [`3.6`, `3.6-debian-9`, `3.6.23`, `3.6.23-debian-9-r170` (3.6/debian-9/Dockerfile)](https://github.com/bitnami/bitnami-docker-mongodb/blob/3.6.23-debian-9-r170/3.6/debian-9/Dockerfile)
+* [`5.0`, `5.0-debian-10`, `5.0.3`, `5.0.3-debian-10-r22` (5.0/debian-10/Dockerfile)](https://github.com/bitnami/bitnami-docker-mongodb/blob/5.0.3-debian-10-r22/5.0/debian-10/Dockerfile)
+* [`4.4`, `4.4-debian-10`, `4.4.10`, `4.4.10-debian-10-r3`, `latest` (4.4/debian-10/Dockerfile)](https://github.com/bitnami/bitnami-docker-mongodb/blob/4.4.10-debian-10-r3/4.4/debian-10/Dockerfile)
+* [`4.2`, `4.2-debian-10`, `4.2.17`, `4.2.17-debian-10-r22` (4.2/debian-10/Dockerfile)](https://github.com/bitnami/bitnami-docker-mongodb/blob/4.2.17-debian-10-r22/4.2/debian-10/Dockerfile)
+* [`4.0`, `4.0-debian-9`, `4.0.27`, `4.0.27-debian-9-r35` (4.0/debian-9/Dockerfile)](https://github.com/bitnami/bitnami-docker-mongodb/blob/4.0.27-debian-9-r35/4.0/debian-9/Dockerfile)
 
 Subscribe to project updates by watching the [bitnami/mongodb GitHub repo](https://github.com/bitnami/bitnami-docker-mongodb).
 
@@ -840,10 +839,6 @@ $ docker-compose up mongodb
 
 - All volumes have been merged at `/bitnami/mongodb`. Now you only need to mount a single volume at `/bitnami/mongodb` for persistence.
 - The logs are always sent to the `stdout` and are no longer collected in the volume.
-
-# Branch Deprecation Notice
-
-MongoDB&reg;'s branch 3.6 is no longer maintained by upstream and is now internally tagged as to be deprecated. This branch will no longer be released in our catalog a month after this notice is published, but already released container images will still persist in the registries. Valid to be removed starting on: 10-02-2021.
 
 # Contributing
 

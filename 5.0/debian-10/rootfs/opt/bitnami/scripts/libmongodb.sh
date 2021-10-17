@@ -817,10 +817,12 @@ mongodb_is_secondary_node_pending() {
 rs.add('$node:$MONGODB_PORT_NUMBER')
 EOF
     )
+    debug "$result"
     # Error code 103 is considered OK.
     # It indicates a possiblely desynced configuration,
     # which will become resynced when the secondary joins the replicaset.
-    if grep -q "\"code\" : 103" <<<"$result"; then
+    # Note: Error NewReplicaSetConfigurationIncompatible rejects the node addition so we need to filter it out
+    if { grep -q "\"code\" : 103" <<<"$result"; } && ! { grep -q "NewReplicaSetConfigurationIncompatible" <<<"$result"; }; then
         warn "The ReplicaSet configuration is not aligned with primary node's configuration. Starting secondary node so it syncs with ReplicaSet..."
         return 0
     fi
@@ -1316,7 +1318,7 @@ mongodb_ensure_dynamic_mode_consistency() {
 }
 
 ########################
-# Check if a givemongodb_sharded_is_join_shard_pendingted externally
+# Check if a given file was mounted externally
 # Globals:
 #   MONGODB_*
 # Arguments:
