@@ -800,12 +800,9 @@ $ docker-compose up mongodb
 
 ## 3.6.23-debian-9-r155, 4.0.26-debian-9-r44, 4.2.15-debian-10-r60, 4.4.8-debian-10-r36, 5.0.2-debian-10-r5
 
-- The variables `MONGODB_EXTRA_USERNAMES`, `MONGODB_EXTRA_PASSWORDS` and `MONGODB_EXTRA_DATABASES` were added to permit initialization of more than one database the first time that a container is run. `MONGODB_EXTRA_USERNAMES`, `MONGODB_EXTRA_PASSWORDS`, `MONGODB_EXTRA_DATABASES` use the characters `,` and/or `;` as field delimiters for consistency with other Bitnami's images such as [OpenLDAP] or [Kafka]. It is still possible to use the variables from prior versions if necessary: `MONGODB_USERNAME`, `MONGODB_PASSWORD` and `MONGODB_DATABASE`.
+- The variables `MONGODB_EXTRA_USERNAMES`, `MONGODB_EXTRA_PASSWORDS` and `MONGODB_EXTRA_DATABASES` were added to permit initialization of more than one database the first time that a container is run. `MONGODB_EXTRA_USERNAMES`, `MONGODB_EXTRA_PASSWORDS`, `MONGODB_EXTRA_DATABASES` use the characters `,` and/or `;` as field delimiters. It is still possible to use the variables from prior versions if necessary: `MONGODB_USERNAME`, `MONGODB_PASSWORD` and `MONGODB_DATABASE`.
 - When specifying extra users, an empty database name will be understood as the Mongo default database called `test`.
 - It is not possible to create extra users with an empty password, this is a Mongo limitation.
-
-  [OpenLDAP]:https://github.com/bitnami/bitnami-docker-openldap
-  [Kafka]: https://github.com/bitnami/bitnami-docker-kafka
 
 ## 4.4.8-debian-10-r31, and 5.0.2-debian-10-r0
 
