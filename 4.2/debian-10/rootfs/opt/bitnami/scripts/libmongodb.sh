@@ -13,7 +13,6 @@
 . /opt/bitnami/scripts/libfs.sh
 . /opt/bitnami/scripts/libnet.sh
 
-
 ########################
 # Return field separator to use in lists. One of comma or semi-colon, comma
 # being preferred.
@@ -31,7 +30,6 @@ mongodb_field_separator() {
         echo ';'
     fi
 }
-
 
 ########################
 # Initialise the arrays databases, usernames and passwords to contain the
@@ -88,7 +86,6 @@ mongodb_auth() {
             ;;
     esac
 }
-
 
 ########################
 # Validate settings in MONGODB_* env. variables
@@ -518,6 +515,7 @@ mongodb_set_net_conf() {
         debug "$conf_file_name mounted. Skipping setting port and IPv6 settings"
     fi
 }
+
 ########################
 # Change bind ip address to 0.0.0.0
 # Globals:
